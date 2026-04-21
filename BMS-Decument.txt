@@ -1,0 +1,246 @@
+Resource Creation 
+--------------------------------------------------
+EC2 Instance 
+
+Based on the configuration you provided, here is the crisp summary of your EC2 instance setup:
+
+### **Core Instance Details**
+* **OS/AMI:** Ubuntu Server 24.04 LTS (HVM)
+* **Architecture:** 64-bit (x86)
+* **Instance Type:** `t2.xlarge` (4 vCPU, 16 GiB RAM)
+* **Key Pair:** `kartik`
+
+### **Networking & Security**
+* **VPC:** `vpc-0c6d2dd0cf53eb2d4`
+* **Public IP:** Enabled (Auto-assign)
+* **Security Group:** Creating new group (`launch-wizard-1`)
+* **Inbound Rules:** * **SSH:** Port 22 open to Anywhere (`0.0.0.0/0`)
+
+### **Storage**
+* **Root Volume:** 30 GiB 
+* **Volume Type:** `gp3` (3000 IOPS)
+* **Encryption:** None
+
+--------PORTS------------------------------------
+
+
+Connect Instance 
+sudo su 
+sudo apt update 
+
+---------Installation Of Packages-----------------------
+
+=============================
+Jenkins 
+=============================
+
+sudo apt update
+sudo apt install fontconfig openjdk-21-jre
+java -version
+
+sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt update
+sudo apt install jenkins
+
+sudo systemctl enable jenkins
+sudo systemctl start jenkins
+sudo systemctl status jenkins
+
+=============================
+Docker 
+=============================
+vi docker.sh ----> Paste the below content ---->
+
+#!/bin/bash
+
+# Update package manager repositories
+sudo apt-get update
+
+# Install necessary dependencies
+sudo apt-get install -y ca-certificates curl
+
+# Create directory for Docker GPG key
+sudo install -m 0755 -d /etc/apt/keyrings
+
+# Download Docker's GPG key
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+
+# Ensure proper permissions for the key
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add Docker repository to Apt sources
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+$(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Update package manager repositories
+sudo apt-get update
+
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 
+
+
+chmod 666 /var/run/docker.sock
+
+=============================
+2.1.3. Install Trivy on Jenkins Server
+=============================
+vi trivy.sh ----> Paste the below commands ---->
+
+#!/bin/bash
+sudo apt-get install wget apt-transport-https gnupg
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+sudo apt-get update
+sudo apt-get install trivy
+
+----> esc ----> :wq ----> sudo chmod +x trivy.sh ----> ./trivy.sh ----> trivy --version
+
+=============================
+2 SonarQube Setup
+=============================
+Connect to the Jenkins Server
+
+docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
+docker images
+docker ps
+
+Access SonarQube, after opening port 9000
+Default username and Password: admin
+Set new password
+
+************************************
+Step 4: Email Integration
+************************************
+As soon as the build happens, i need to get an email notification to do that we have to configure our email.
+Goto Gmail ---> Click on Icon on top right ---> Click on 'Your google account' ---> in search box at top, search for 'App  Passwords' and click on it, Enter password of gmail ---> Next ---> App name: jenkins ---> Create ---> You can see the password (ex: fxssvxsvfbartxnt) ---> Copy it ---> Make sure to remove the spaces in the password. Lets configure this password in Jenkins.
+
+Goto the Jenkins console ---> Manage Jenkins ---> Security ---> Credentials ---> Under 'Stores scoped to Jenkins', Click on 'Global' under 'Domains' ---> Add credentials ---> A dia ---> Kind: Username with Password, Scope: Global, Username: <ProvideEmail ID>, Password: <PasteTheToken>, ID: email-creds, Description: email-creds ---> Create ---> You can see the email credentials got created.
+
+Manage Jenkins ---> System ---> Scroll down to 'Extended Email Notification' ---> SMTP Server: smtp.gmail.com ---> SMTP Port: 465, Click on 'Advanced'  ---> Credentials: Select 'email creds' from drop down, 'Check' Use SSL and Use OAuth 2.0, Default content type: HTML
+
+Scroll down to 'Email Notification' ---> SMTP Server: smtp.gmail.com ---> Click on 'Advanced'  ---> 'Check' Use SMTP Authentication, Username: <ProvideEmailID>, Password: <PasteThePasswordToken>, 'Check' Use SSL, SMTP Port: 465, Reply-to-email: <ProvideEmail>, Charset: UTF-8,, Check 'Test configuration by sending test e-mail', Test Email Recepient: <provide-email-id>, Click on 'Test Configuration' ---> You can see 'email sent' ---> Goto email and check for test email
+
+Lets make another configuration to get an email when build fails/success ---> Goto 'Default Triggers' drop down (If you cannot find this, try searching using control+f ---> 'Check' Always, Failure-Any, Success ---> Apply ---> Save 
+
+
+=============================
+Install NPM
+=============================
+apt install npm
+
+
+=============================
+1.2. Creation of EKS Cluster
+=============================
+1.2.1. Creation of IAM user (To create EKS Cluster, its not recommended to create using Root Account)
+
+1.2.2. Attach policies to the user 
+ AmazonEC2FullAccess, AmazonEKS_CNI_Policy, AmazonEKSClusterPolicy, AmazonEKSWorkerNodePolicy, AWSCloudFormationFullAccess, IAMFullAccess
+
+Attach the below inline policy also for the same user
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "eks:*",
+            "Resource": "*"
+        }
+    ]
+}
+
+
+1.2.3. Create Access Keys for the user created
+
+With this we have created the IAM User with appropriate permissions to create the EKS Cluster
+
+=============================
+1.3. Creation of EKS Cluster 
+=============================
+Connect to the 'BMS-Server' VM
+sudo apt update
+
+
+1.3.1. Install AWS CLI (to interact with AWS Account)
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+sudo apt install unzip
+unzip awscliv2.zip
+sudo ./aws/install
+aws configure
+
+Configure aws by executing below command
+aws configure 
+
+
+1.3.2. Install KubeCTL (to interact with K8S)
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin
+kubectl version --short --client
+
+
+1.3.3. Install EKS CTL (used to create EKS Cluster) 
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv /tmp/eksctl /usr/local/bin
+eksctl version
+
+
+1.3.4. Create EKS Cluster
+Execute the below commands as separate set
+(a)
+eksctl create cluster --name=kartik-eks \
+                      --region=us-east-1 \
+                      --zones=us-east-1a,us-east-1b \
+                      --version=1.30 \
+                      --without-nodegroup
+
+It will take 5-10 minutes to create the cluster
+Goto EKS Console and verify the cluster.
+
+(b)
+eksctl utils associate-iam-oidc-provider \
+    --region us-east-1 \
+    --cluster kartik-eks \
+    --approve
+
+The above command is crucial when setting up an EKS cluster because it enables IAM roles for service accounts (IRSA)
+Amazon EKS uses OpenID Connect (OIDC) to authenticate Kubernetes service accounts with IAM roles.
+Associating the IAM OIDC provider allows Kubernetes workloads (Pods) running in the cluster to assume IAM roles securely.
+Without this, Pods in EKS clusters would require node-level IAM roles, which grant permissions to all Pods on a node.
+Without this, these services will not be able to access AWS resources securely.
+
+(c)
+Before executing the below command, in the 'ssh-public-key' keep the  '<PEM FILE NAME>' (dont give .pem. Just give the pem file name) which was used to create Jenkins Server
+
+eksctl create nodegroup --cluster=kastro-eks \
+                       --region=us-east-1 \
+                       --name=node2 \
+                       --node-type=t3.medium \
+                       --nodes=3 \
+                       --nodes-min=2 \
+                       --nodes-max=4 \
+                       --node-volume-size=20 \
+                       --ssh-access \
+                       --ssh-public-key=Kastro \
+                       --managed \
+                       --asg-access \
+                       --external-dns-access \
+                       --full-ecr-access \
+                       --appmesh-access \
+                       --alb-ingress-access
+
+It will take 5-10 minutes 
+
+(d) For internal communication b/w control plane and worker nodes, open 'all traffic' in the security group of EKS Cluster
+
+
+
+
+
+
+
