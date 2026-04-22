@@ -198,6 +198,7 @@ eksctl create cluster --name=kartik-eks \
                       --zones=us-east-1a,us-east-1b \
                       --version=1.30 \
                       --without-nodegroup
+Email-Creds : juzxxonvuzjyxifc
 
 It will take 5-10 minutes to create the cluster
 Goto EKS Console and verify the cluster.
@@ -247,14 +248,14 @@ pipeline {
     agent any
 
     tools {
-        jdk 'jdk17'
+        jdk 'jdk21'
         nodejs 'node23'
     }
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_IMAGE = 'kastrov/bms:latest'
-        EKS_CLUSTER_NAME = 'kastro-eks'
+        DOCKER_IMAGE = 'kartik404/bms:latest'
+        EKS_CLUSTER_NAME = 'kartik404-eks'
         AWS_REGION = 'ap-northeast-1'
     }
 
@@ -267,7 +268,7 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'main', url: 'https://github.com/KastroVKiran/Book-My-Show.git'
+                 git branch: 'main', url: 'https://github.com/kartikhegadi/BookMyShow.git'
                 sh 'ls -la'  // Verify files after checkout
             }
         }
@@ -361,7 +362,7 @@ stage('Install Dependencies') {
                 body: "Project: ${env.JOB_NAME}<br/>" +
                       "Build Number: ${env.BUILD_NUMBER}<br/>" +
                       "URL: ${env.BUILD_URL}<br/>",
-                to: 'kastrokiran@gmail.com',
+                to: 'prajwal.ccs.aws@gmail.com',
                 attachmentsPattern: 'trivyfs.txt'
         }
     }
