@@ -1,0 +1,161 @@
+================================================================
+  BOOKMYSHOW CLONE — CI/CD PIPELINE BLUEPRINT
+================================================================
+
+PROJECT      : BookMyShow Clone
+PIPELINE TYPE: CI/CD (Continuous Integration & Continuous Deployment)
+DEPLOYMENT   : Kubernetes + GitOps (ArgoCD)
+MONITORING   : Prometheus + Grafana
+
+----------------------------------------------------------------
+STAGE 1 — SOURCE CONTROL (GitHub)
+----------------------------------------------------------------
+Tool         : GitHub
+Purpose      : Central repository for all application source code
+Trigger      : Developer pushes code or opens a Pull Request
+Output       : Webhook triggers Jenkins pipeline automatically
+Notes        : Use branch strategy — feature/* → develop → main
+
+----------------------------------------------------------------
+STAGE 2 — BUILD & CI (Jenkins)
+----------------------------------------------------------------
+Tool         : Jenkins
+Purpose      : Orchestrates the entire CI/CD pipeline
+Steps        :
+  - Pull latest source code from GitHub
+  - Install dependencies
+  - Run unit & integration tests
+  - Package/compile the application
+Output       : Build artifacts ready for quality analysis
+Notes        : Use Jenkinsfile (pipeline-as-code) in repo root
+
+----------------------------------------------------------------
+STAGE 3 — CODE QUALITY ANALYSIS (SonarQube)
+----------------------------------------------------------------
+Tool         : SonarQube
+Purpose      : Static code analysis & quality gate enforcement
+Checks       :
+  - Code smells & duplication
+  - Bugs and vulnerabilities in code
+  - Test coverage thresholds
+  - Maintainability ratings
+Output       : Quality gate PASS/FAIL
+Notes        : Pipeline halts if quality gate FAILS
+
+----------------------------------------------------------------
+STAGE 4 — SECURITY SCANNING (Trivy)
+----------------------------------------------------------------
+Tool         : Trivy (by Aqua Security)
+Purpose      : Container image & filesystem vulnerability scanning
+Checks       :
+  - OS package vulnerabilities (CVEs)
+  - Application dependency vulnerabilities
+  - Misconfigurations in Dockerfile
+Severity     : Block on CRITICAL / HIGH severity findings
+Output       : Scan report; pipeline halts on critical CVEs
+Notes        : Scan before pushing image to registry
+
+----------------------------------------------------------------
+STAGE 5 — CONTAINER BUILD & PUSH (Docker Hub)
+----------------------------------------------------------------
+Tool         : Docker + Docker Hub
+Purpose      : Build Docker image and push to registry
+Steps        :
+  - docker build -t bookmyshow-clone:<tag> .
+  - docker tag with version (e.g., git commit SHA)
+  - docker push to Docker Hub registry
+Output       : Tagged Docker image available in Docker Hub
+Notes        : Use multi-stage builds to minimize image size
+
+----------------------------------------------------------------
+STAGE 6 — NOTIFICATION (Gmail / Email)
+----------------------------------------------------------------
+Tool         : Gmail (SMTP / Jenkins Email Plugin)
+Purpose      : Alert team of build status & await human approval
+Triggers     :
+  - Build SUCCESS → notify team + request deployment approval
+  - Build FAILURE → alert developer with failure details
+Output       : Email sent to team/DevOps engineer
+Notes        : Configure Jenkins Extended Email Plugin
+
+----------------------------------------------------------------
+STAGE 7 — MANUAL APPROVAL GATE
+----------------------------------------------------------------
+Tool         : Jenkins Input Step / Human Reviewer
+Purpose      : Human-in-the-loop gate before production deploy
+Action       : DevOps engineer reviews build/scan reports and
+               either APPROVES or REJECTS the deployment
+Timeout      : Auto-reject if no response within defined window
+Output       : Approved → proceed to deployment stage
+
+----------------------------------------------------------------
+STAGE 8 — DEPLOYMENT ORCHESTRATION (Kubernetes)
+----------------------------------------------------------------
+Tool         : Kubernetes (K8s)
+Purpose      : Container orchestration for scalable deployment
+Resources    :
+  - Deployment manifest (replicas, image tag, resource limits)
+  - Service manifest (ClusterIP / LoadBalancer)
+  - Ingress (routing rules)
+  - ConfigMaps & Secrets
+Update       : Rolling update strategy (zero downtime)
+Notes        : Update image tag in Helm chart / K8s manifests
+
+----------------------------------------------------------------
+STAGE 9 — GITOPS CONTINUOUS DELIVERY (ArgoCD)
+----------------------------------------------------------------
+Tool         : ArgoCD
+Purpose      : GitOps-based continuous delivery to Kubernetes
+Workflow     :
+  - Watches a Git repo for K8s manifest changes
+  - Auto-syncs desired state to cluster
+  - Detects and alerts on drift
+Dashboard    : Visual app health, sync status, rollback support
+Notes        : Store K8s manifests in a separate GitOps repo
+
+----------------------------------------------------------------
+STAGE 10 — MONITORING & OBSERVABILITY (Prometheus + Grafana)
+----------------------------------------------------------------
+Tools        : Prometheus (metrics collection) + Grafana (dashboards)
+Purpose      : Real-time monitoring of the deployed application
+Metrics      :
+  - CPU / Memory / Pod health
+  - Request rate, error rate, latency (RED metrics)
+  - Custom app metrics (booking count, payment success rate)
+Alerts       : Configure Alertmanager for PagerDuty / Slack alerts
+Notes        : Deploy via kube-prometheus-stack Helm chart
+
+================================================================
+SUMMARY FLOW
+================================================================
+
+  GitHub → Jenkins → SonarQube → Trivy → Docker Build
+     ↓
+  Docker Hub ← Push image
+     ↓
+  Email Notification → Manual Approval
+     ↓
+  Kubernetes Deployment ← ArgoCD (GitOps sync)
+     ↓
+  Prometheus + Grafana (Monitoring)
+
+================================================================
+TOOLS SUMMARY
+================================================================
+
+  Stage         | Tool               | Category
+  --------------|--------------------|-----------------------
+  Source Code   | GitHub             | Version Control
+  CI Pipelines  | Jenkins            | CI Server
+  Code Quality  | SonarQube          | Static Analysis
+  Security Scan | Trivy              | Vulnerability Scanner
+  Container     | Docker + DockerHub | Containerization
+  Notification  | Gmail / Email      | Alerting
+  Approval Gate | Jenkins Input      | Manual Gate
+  Orchestration | Kubernetes         | Container Orchestration
+  GitOps CD     | ArgoCD             | Continuous Delivery
+  Monitoring    | Prometheus+Grafana | Observability
+
+================================================================
+  END OF BLUEPRINT — BookMyShow Clone DevOps Pipeline
+================================================================
